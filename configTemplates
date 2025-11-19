@@ -1,0 +1,163 @@
+{
+            "walker_5": {
+                "structure": {
+                    "meta": {"connections": 4},
+                    "center": "body",
+                    "P3": "frontL_leg",
+                    "P5": "frontR_leg",
+                    "P2": "backL_leg",
+                    "P6": "backR_leg"
+                },
+                "control": {
+                    "forward": {
+                        "params": {"period": 5.0, "duty": 0.4},
+                        "tracks": {
+                            "body": [
+                                {"at": "@period*.25", "set" : {"inflate": 1}},
+                                {"dt": "@period*0.5", "set": {"inflate": 0}}
+                            ],
+                            "frontL_leg": [
+                                {"at": 0.0, "set" : {"inflate": 1}},
+                                {"dt": "@duty*period", "set" : {"inflate": 0}}
+                            ],
+                            "frontR_leg": [
+                                {"at": 0.0, "set" : {"inflate": 1}},
+                                {"dt": "@duty*period", "set" : {"inflate": 0}}
+                            ],
+                            "backL_leg": [
+                                {"at": "@0.5*period", "set" : {"inflate": 1}},
+                                {"dt": "@duty*period", "set" : {"inflate": 0}}
+                            ],
+                            "backR_leg": [
+                                {"at": "@0.5*period", "set" : {"inflate": 1}},    
+                                {"dt": "@duty*period", "set" : {"inflate": 0}}
+                            ]
+                            
+                        }
+                    }
+                
+                }
+            },
+            "climbing_6": {
+                "structure": {
+                    "meta": {"connections": 2},
+                    "center": "body",
+                    "P1": "backL_leg",
+                    "P4": "frontR_leg",
+                    "P1>P1": "backR_leg",
+                    "P4>P4": "frontL_leg"
+                },
+                "control": {
+                    "front_climb": {
+                        "params" : {"period": 8.0, "duty": 0.2},
+                        "tracks": {
+                            "body": [
+                                {"at": "@0.2*period", "set" : {"inflate": 1}},
+                                {"dt": "@3*duty*period", "set": {"inflate": 0}}
+                            ],
+                            "frontL_leg": [
+                                {"at": 0.0, "set" : {"inflate": 1}},
+                                {"dt": "@3*duty*period", "set" : {"inflate": 0}}
+                            ],
+                            "frontR_leg": [
+                                {"at": 0.0, "set" : {"inflate": 1}},
+                                {"dt": "@3*duty*period", "set" : {"inflate": 0}}
+                            ],
+                            "backL_leg": [
+                                {"at": "@0.6*period", "set" : {"inflate": 1}},
+                                {"dt": "@2*duty*period", "set" : {"inflate": 0}}
+                            ],
+                            "backR_leg": [
+                                {"at": "@0.6*period", "set" : {"inflate": 1}},    
+                                {"dt": "@2*duty*period", "set" : {"inflate": 0}}
+                            ]
+                        }
+                    }
+                }
+            },
+            "roller_6": {
+                "structure": {
+                    "meta": {"connections": 6},
+                    "center": "roll1",
+                    "P4": "roll2",
+                    "P3": "roll3",
+                    "P2": "roll4",
+                    "P1": "roll2",
+                    "P5": "roll5",
+                    "P6": "roll6"
+                },
+                "control": {
+                    "forward": {
+                        "params": {"period": 8.0, "duty": 0.3},
+                        "tracks": {
+                            "roll1": [
+                                {"at": 0.0, "set" : {"inflate": 1}},
+                                {"dt": "@duty*period", "set": {"inflate": 0}}
+                            ],
+                            "roll2": [
+                                {"at": "@0.5*period", "set" : {"inflate": 1}},
+                                {"dt": "@duty*period", "set": {"inflate": 0}}
+                            ],
+                            "roll3": [
+                                {"at": "@0.25*period", "set" : {"inflate": 1}},
+                                {"dt": "@duty*period", "set": {"inflate": 0}}
+                            ],
+                            "roll4": [
+                                {"at": "@0.75*period", "set" : {"inflate": 1}},
+                                {"dt": "@duty*period", "set": {"inflate": 0}}
+                            ],
+                            "roll5": [
+                                {"at": "@0.25*period", "set" : {"inflate": 1}},
+                                {"dt": "@duty*period", "set": {"inflate": 0}}
+                            ],
+                            "roll6": [
+                                {"at": "@0.75*period", "set" : {"inflate": 1}},
+                                {"dt": "@duty*period", "set": {"inflate": 0}}
+                            ]
+                        }   
+                    }
+                } 
+            },
+            "manus_4": {
+                "structure": {
+                    "meta": {"connections": 2},
+                    "center": "wrist1",
+                    "P3": "finger1",
+                    "P1": "wrist2",
+                    "P1>P2": "finger2"
+                },
+                "control": {
+                    "grasp": {
+                        "params": {"period": 6.0},
+                        "tracks": {
+                            "wrist1": [
+                                {"at": 0.0, "set" : {"inflate": 1}},
+                            ],
+                            "wrist2": [
+                                {"at": 0.0, "set" : {"inflate": 1}},
+                            ],
+                            "finger1": [
+                                {"at": "@0.5*period", "set" : {"inflate": 1}},
+                            ],
+                          
+                            "finger2": [
+                                {"at": "@0.5*period", "set" : {"inflate": 1}}
+                            ]
+                        }
+                    }
+                }
+            },
+            "sinusoidal_4": {
+                "structure": {
+                    "meta": {"connections": 2},
+                    "center": "body2",
+                    "P1": "body1",
+                    "P4": "body3",
+                    "P4>P1": "body4"
+                },
+                "control": {
+                    "sidwind": [ # 
+                    ]
+                }
+            }
+        }
