@@ -1,8 +1,11 @@
+# Class to send commands to control module via serial communication.
+# Commands are based on actions defined by the model checker.
+
 import serial
 
 class SendCommands:
     def __init__(self, modules, serial_port='/dev/cu.usbmodem14401', baud_rate=9600):
-        self.col = 3
+        self.col = 4    # Number of "active" ports + bend angle (inflate command))
         self.rows = modules
         self.serial_port = serial_port
         self.baud_rate = baud_rate
@@ -17,10 +20,10 @@ class SendCommands:
             
             if parts[0] == "connect":
                 control_matrix[module_idx][port_idx] = 1
+                # Temp in progress, determine how to set bend angle based on model checker action
+                control_matrix[module_idx][3] = 90  # Example: Set bend angle to 90 degrees when connecting
             if parts[0] == 'disconnect':
                 control_matrix[module_idx][port_idx] = -1
-
-                #To be added: Angle/position commands
         
         return control_matrix
 
@@ -36,10 +39,10 @@ class SendCommands:
 
 
 if __name__ == '__main__':
-    command = sendCommands(modules=3)
+    command = SendCommands(modules=3)
 
-    actions = ["connect_M1_P1_M2_P2", "disconnect_M3_P3"]
-    #command.actions_to_matrix(actions)
-    command.write_actions_matrix(actions)
+    actions = ["connect_M1_P1_M2_P4", "disconnect_M3_P3"]
+    print(command.actions_to_matrix(actions))
+    #command.write_actions_matrix(actions)
 
 

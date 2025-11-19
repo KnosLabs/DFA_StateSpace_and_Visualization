@@ -1,12 +1,12 @@
 from visualizer import ModularVisualizer
-from readMatrix import read_matrix_from_serial
-from modelChecker import run_model_checker
+#from readSerial import SerialReader
+#from modelChecker import run_model_checker
 import time
 import csv
 
 from itertools import product, permutations
 
-class stateGenerator:
+class StateGenerator:
     def __init__(self, num_modules):
         self.num_modules = num_modules
         self.states = set()  
@@ -241,7 +241,7 @@ class stateGenerator:
 
 if __name__ == "__main__":
     num_modules = 3
-    stateGen = stateGenerator(num_modules)
+    stateGen = StateGenerator(num_modules)
     stateGen.export_transitions()
     
     while True:

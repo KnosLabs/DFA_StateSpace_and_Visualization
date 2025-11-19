@@ -3,7 +3,7 @@ from sendCommands import SendCommands
 from modelChecker import run_model_checker
 from visualizer import ModularVisualizer
 from continuousTimePlot import TimePlot
-from readMatrix import read_matrix_from_serial
+from readSerial import SerialReader
 import time
 
 class DFA:
@@ -110,10 +110,12 @@ if __name__ == "__main__":
     dfa.import_transitions()
 
     plot = TimePlot()
+    read = SerialReader(modules=5)
 
-    serial_port = '/dev/cu.usbmodem14401'
-    command = sendCommands(modules=5, port=serial_port, baudrate=9600)
+    serial_port = read.find_port()
+    command = SendCommands(modules=4, port=serial_port)
 
+    #Self Reconfiguration Code
     initial_matrix = [[0, 1, 0],        # Could be read from control module
                     [0,  0, 0],  
                     [12,  0, 0]    
@@ -134,7 +136,7 @@ if __name__ == "__main__":
         commandSent = False
 
         while True:     # Waits for action to be completed
-            matrix = read_matrix_from_serial(port=serial_port, baudrate=9600)  ## Reads current Matrix
+            matrix = read.read_matrix()  ## Reads current Matrix
             current_state = dfa.matrix_to_state(matrix)    #Converts matrix to a state
 
             if commandSent == False:    # Only send command to control module once
