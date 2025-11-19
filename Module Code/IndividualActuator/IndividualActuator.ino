@@ -1,87 +1,120 @@
 #include <Wire.h>
 
-// Actuator ID
-#define ACTUATOR_ID 1
+#define MODULE_ID 2
 
-// Connector Pin Assignment
-const int INPUT_PORTS[3] = {1, 2};
-const int OUTPUT_PORTS[3] = {8, 9};
+//Correct pin layout
+const int selectPins[4] = {0, 1, 2, 3};
+const int z = 7; 
 
-// Solenoid Pins
-const int AIR_IN_PIN = 6;
-const int AIR_OUT_PIN = 7;
+const int bendPin = 6;
+const int outputPorts[3] = {8, 9, 10};
 
-// Connector Pins
-const int lock1Pin = 10;
-const int unlock1Pin = 3;
 
-// Bending Sensor Pin
-const int bendPin = 0;
+//Temp pin assignments
+/*const int selectPins[4] = {4, 6, 8, 9};
+const int z = 5; 
 
-//Local version of current configuration matrix
+const int bendPin = 1;
+const int outputPorts[3] = {2, 3, 10};*/
 
+//INPUT PORTS
+ int ID1A[4] = {0, 0, 1, 0};
+ int ID1B[4] = {1, 0, 1, 0}; 
+ int ID2A[4] = {0, 0, 0, 0}; 
+ int ID2B[4] = {1, 0, 0, 0};
+ int ID3A[4] = {1, 1, 0, 0};
+ int ID3B[4] = {0, 1, 0, 0};
+
+
+ int* inputPorts[6] = {ID1A, ID1B, ID2A, ID2B, ID3A, ID3B};
+
+//Air solenoids 
+  int airIn[4] = {0, 1, 1, 0};
+  int airOut[4] = {1, 1, 1, 0};
+
+ //Locking Connectors (Motor drivers)
+  int Unlock1[4] = {1, 0, 1, 1};
+  int Lock1[4] = {0, 1, 1, 1};
+  int Unlock2[4] = {1, 0, 0, 1};
+  int Lock2[4] = {0, 1, 0, 1};
+  int Unlock3[4] = {1, 1, 0, 1};
+  int Lock3[4] = {0, 0, 1, 1};
+  int test[4] = {1, 1, 1, 1};
+  
+
+  int* locking[3] = {Lock1, Lock2, Lock3};
+  int* unlocking[3] = {Unlock1, Unlock2, Unlock3};
+
+//Local configuration matrix
 volatile bool dataReceived = false;
 volatile int receivedData = 0;
 
-int incomingMatrix[3];
+int incomingMatrix[3];   
 
-int angle = 0;
-int inputData[3] = {0, 0, 0};
+int8_t inputData[4] = {0, 0, 0, 0};    //Receiving ports and bend angle
 bool pairMode[3] = {false, false, false};
-bool handShake[3] = {false, false, false};
 
 bool connected[6] = {false, false, false, false, false, false};
 
+volatile int angle = 0;
+
+int binaryArray[4];
+
 void setup() {
   Serial.begin(9600);
-  Wire.begin(ACTUATOR_ID);
+  Wire.begin(MODULE_ID);
   Wire.onRequest(requestEvent);
   Wire.onReceive(receiveEvent);
 
-  // Bending Sensor
+  for (int i=0; i<3; i++) {
+    pinMode(outputPorts[i], INPUT);
+  }
+
+  for (int i=0; i<4; i++) {
+    pinMode(selectPins[i], OUTPUT);
+    digitalWrite(selectPins[i], LOW);
+  }
+
   pinMode(bendPin, INPUT);
+//disconnect(0);
+ //connect(2);
+ //connect(2);
 
-  // Solenoid pin 
-  pinMode(AIR_IN_PIN, OUTPUT);
-  digitalWrite(AIR_IN_PIN, HIGH);
 
-  pinMode(lock1Pin, OUTPUT);
-  pinMode(unlock1Pin, OUTPUT);
-
-  digitalWrite(unlock1Pin, HIGH);
-  delay(1000);
-  digitalWrite(unlock1Pin, LOW);
 }
-
 
 void loop() {
-  /*
-  // Read and Write each port (1, 2, 4, 5)
-  for (int i = 0; i < 2; i++) {
-    readPorts(INPUT_PORTS[i], i);
-    writePorts(OUTPUT_PORTS[i], i + 4, i);
-    Serial.println(inputData[i]); 
-    delay(50);
+//Check all input and output ports for signal 
+for (int i = 0; i < 6; i++) {
+    setPins(inputPorts[i]);
+    readPort(z, i);
   }
-  conditionCode(); 
-  */
+  
+ for (int i = 0; i < 3; i++){
+    writePort(outputPorts[i], i + 4, i);
+  }
 
-  /*readAngle();
+  readAngle();
+  Serial.print("Angle: ");
   Serial.println(angle);
-  */
-  //disconnect(1);
-  //delay(5000);
-  //disconnect(1);
-  //delay(5000);
-  delay(50);
+  delay(100);
+  //boardTest();
 }
 
 
-void writePorts(int port, int portNum, int idx) {
+void setPins(int input[4]){
+  for(int i=0; i<4; i++){
+    digitalWrite(selectPins[i], input[i] == 1 ? HIGH : LOW);
+  }
+}
+
+
+//Write ports
+void writePort(int port, int portNum, int idx) {
+  // Check if port is connected via update from control module
   if(connected[portNum-1]){
     pinMode(port, OUTPUT);
     digitalWrite(port, HIGH);
-    Serial.print("Port 4 connected");
   }
 
   else{
@@ -89,16 +122,10 @@ void writePorts(int port, int portNum, int idx) {
   pinMode(port, INPUT_PULLDOWN);
   attachInterrupt(digitalPinToInterrupt(port), pairingMode, CHANGE);
 
+
 // Check to see if actuator should go into pairing mode
   if(pairMode[idx] == true){
     detachInterrupt(digitalPinToInterrupt(port));
-
-    //Send handshake data 
-    pinMode(port, OUTPUT);
-    digitalWrite(port, HIGH);
-    delay(10);
-    digitalWrite(port, LOW);
-    pinMode(port, INPUT_PULLDOWN);
 
     int startTime = millis();
     Serial.print("In pairing mode on port ");
@@ -113,89 +140,90 @@ void writePorts(int port, int portNum, int idx) {
     }
 
   pinMode(port, OUTPUT);
-  delay(200);
+  delay(75);
+  digitalWrite(port, HIGH);
+  delay(75);
+  digitalWrite(port, LOW);
+  delay(50);
 
   //Combine port number and actuator data
-  int data = (portNum & 0x07) | ((ACTUATOR_ID & 0x1F) << 3); 
+  int data = (portNum & 0x07) | ((MODULE_ID & 0x1F) << 3); 
   Serial.print("Sending data: ");
   Serial.println(data);
 
   //Send data bitwise
   for (int i = 0; i < 8; i++) {
     digitalWrite(port, (data & (1 << i)) ? HIGH : LOW);
-    delay(150); 
+    delay(75); 
   }
 
-    digitalWrite(port, LOW);
+    //Set pin to high
+    digitalWrite(port, HIGH);
     pairMode[idx] = false;
    }
   }
 }
 
-void readPorts(int port, int idx) {
+// Read Ports
+void readPort(int port, int idx) {
+    //Stop reading process if actuator data is already read and detected
+    pinMode(z, INPUT_PULLDOWN);
+    delay(20);
+
     if(digitalRead(port) == HIGH){
       connected[idx] = true;
-      detachInterrupt(digitalPinToInterrupt(port));
       return;
-
     } else {
       connected[idx] = false;
+      inputData[idx%2] == 0;
     }
 
     if(connected[idx] == false){
       pinMode(port, OUTPUT);
       digitalWrite(port, HIGH);
-      delay(10);
+      delay(50);
       digitalWrite(port, LOW);
 
       pinMode(port, INPUT_PULLDOWN);
-      attachInterrupt(digitalPinToInterrupt(port), handshake, CHANGE);
-      delay(200);
+      delay(70);
 
-      if(handShake[idx] && receivedData == 0){
-          Serial.println("Receiving...");
-          detachInterrupt(digitalPinToInterrupt(port));
-          receivedData = 0;
-          for (int j = 0; j < 8; j++) { 
-            if (digitalRead(port) == HIGH) {
-              receivedData |= (1 << j);
+      if(digitalRead(port)==HIGH){
+        delay(100);
+        if(inputData[idx%2] == 0){
+            Serial.print("Receiving on ... ");
+            Serial.println(idx);
+            receivedData = 0;
+            for (int j = 0; j < 8; j++) { 
+              if (digitalRead(port) == HIGH) {
+                receivedData |= (1 << j);
+              }
+              delay(75);
             }
-            delay(150);
-          }
-          connect(port);
-          if (int(receivedData) == 5){
-            receivedData == 20;
-          }
-          inputData[idx] = receivedData;
-      } /*else {
-            int startTime = millis();
-            while(digitalRead(port) == LOW){
-              if(millis() - startTime > 5000){
-                inputData[idx] = 0;
+            //Initiates locking
+            if(receivedData != 0){
+                connect(idx/2);
+                Serial.print("Recieved on port ");
+                Serial.print(port/2);
+                Serial.print(" ");
+                Serial.println(receivedData);
             }
-          }
-      }*/
-      handShake[idx] = false;
-        //decodeData(receivedData);
-    
+
+          //Switches data sign depending on port received on
+            if(idx%2 == 1){
+              receivedData = -1 * receivedData;
+            }
+            inputData[idx/2] = receivedData;
+        }
+          //decodeData(receivedData);
+      
+      }
     }
 }
 
 void pairingMode() {
   for(int i = 0; i < 3; i++){
-    if(digitalRead(OUTPUT_PORTS[i]) == HIGH){
+    if(digitalRead(outputPorts[i]) == HIGH){
       pairMode[i] = true;
-    }
-  }
-}
-
-//Run when receiver detects handshake signal
-void handshake() {
-  for(int i = 0; i < 3; i++){
-    if(digitalRead(INPUT_PORTS[i]) == HIGH && connected[i] == false){
-      handShake[i] = true;
-      Serial.print("Handshake read on port ");
-      Serial.println(i+1);
     }
   }
 }
@@ -210,48 +238,32 @@ void decodeData(int data){
     Serial.println(connectorNumber);
 }
 
-void readAngle(){
-  int bendValue = analogRead(bendPin);
-  angle = map(bendValue, 0, 1023, 0, 180);
-}
-
-
-void connect(int port){
-  switch (port){
-    case 1:
-      for(int i = 0; i < 10; i++) {
-        analogWrite(unlock1Pin, 50);
+void connect(int motor){
+    for(int i = 0; i < 10; i++) {
+        setPins(unlocking[motor]);
+        analogWrite(z, 100);
         delay(75);
-        analogWrite(unlock1Pin, 0);
-        analogWrite(lock1Pin, 1023);
+        setPins(locking[motor]);
+        analogWrite(z, 255);
         delay(150);
-        analogWrite(lock1Pin, 0);
+        analogWrite(z, 0);
       }
-      break;
-    default:
-      break;
-}
 }
 
-void disconnect(int port){
-  switch (port){
-    case 1:
-      for(int i = 0; i < 10; i++) {
-        analogWrite(lock1Pin, 150);
+void disconnect(int motor){
+    for(int i = 0; i < 10; i++) {
+        setPins(locking[motor]);
+        analogWrite(z, 100);
         delay(75);
-        analogWrite(lock1Pin, 0);
-        analogWrite(unlock1Pin, 1023);
+        setPins(unlocking[motor]);
+        analogWrite(z, 255);
         delay(150);
-        analogWrite(unlock1Pin, 0);
+        analogWrite(z, 0);
       }
-      break;
-    default:
-      break;
-  }
 }
 
 void requestEvent() {
-  Wire.write(ACTUATOR_ID); // Send the actuator ID first
+  Wire.write(MODULE_ID); // Send the actuator ID first
   for (int i = 0; i < 3; i++) {
     Serial.println(inputData[i]);
     Wire.write(inputData[i]); // Send each data in the array
@@ -271,10 +283,49 @@ void receiveEvent(int numByte){
   }
 }
 
+void readAngle(){
+  int bendValue = analogRead(bendPin);
+  angle = map(bendValue, 660, 1023, 0, 100);
+  inputData[3] = angle;
+}
 
-void conditionCode(){
-  if(connected[0] == true && connected[3] == true && ACTUATOR_ID == 3){
-    Serial.println("Disconnecting");
-    disconnect(1);
+
+void resetPins(){
+  for(int i=0; i<4; i++){
+    digitalWrite(selectPins[i], LOW);
   }
+}
+
+
+void boardTest(){  //iterates over all pins on the multiplexer
+   for (int i = 0; i < 16; i++) {
+    String binary = String(i, BIN);
+    while (binary.length() < 4) {
+      binary = "0" + binary;
+    }
+    for (int j = 0; j < 4; j++) {
+      binaryArray[j] = binary.charAt(j) - '0';  // Convert char to int
+    }
+    setPins(binaryArray);
+    digitalWrite(z, HIGH);
+    delay(1500);
+    digitalWrite(z, LOW);
+
+    Serial.print("Active Pin: ");
+    Serial.println(i);
+  }
+
+  for (int k = 0; k < 3; k++){
+      Serial.print("Output Port: ");
+      Serial.println(4+k);
+      digitalWrite(outputPorts[k], HIGH);
+      delay(1500);
+      digitalWrite(outputPorts[k], LOW);
+    }
+
+  readAngle();
+  Serial.print("Angle: ");
+  Serial.println(angle);
+
+   
 }

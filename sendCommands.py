@@ -1,6 +1,6 @@
 import serial
 
-class sendCommands:
+class SendCommands:
     def __init__(self, modules, serial_port='/dev/cu.usbmodem14401', baud_rate=9600):
         self.col = 3
         self.rows = modules

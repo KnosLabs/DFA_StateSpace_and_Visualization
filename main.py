@@ -1,8 +1,8 @@
 import csv
-from send_commands import sendCommands
+from sendCommands import SendCommands
 from modelChecker import run_model_checker
 from visualizer import ModularVisualizer
-from ContinuousTimePlot import TimePlot
+from continuousTimePlot import TimePlot
 from readMatrix import read_matrix_from_serial
 import time
 
