@@ -130,9 +130,11 @@ class StateGenerator:
     def generate_possible_actions(self):
         actions = []
         for i in range(self.num_modules):
-            for connections in product(self.femalePorts, self.orientations):
+            #Control module connections
+            for connections in product(self.femalePorts, self.orientations):        
                         fPort, orientation = connections
                         actions.append(f'connect_M{i+1}_{fPort}_M0_P0_{orientation}')
+            #Module to module connections
             for j in range(self.num_modules):
                 if i != j:
                     for connections in product(self.malePorts, self.femalePorts, self.orientations):

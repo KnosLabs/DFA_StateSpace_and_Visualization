@@ -1,2 +1,4 @@
 serial
 numpy
+matplotlib
+itertools
