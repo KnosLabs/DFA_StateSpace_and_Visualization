@@ -155,5 +155,38 @@
     "control": {
       "sidwind": []
     }
+  },
+  "test_3": {
+    "structure": {
+      "meta": { "connections": 2 },
+      "center": "mod1",
+      "P1": "mod2",
+      "P3": "mod3"
+    },
+    "control": {
+      "move": {
+        "params": { "period": 6.0},
+        "tracks": {
+          "mod1": [
+            { "at": 0.0, "set": { "inflate": 1 } }
+          ],
+          "mod2": [
+            { "at": 0.0, "set": { "inflate": 1 } }
+          ],
+          "mod3": [
+            { "at": "@0.5*period", "set": { "inflate": 1 } }
+          ]
+        }
+      },
+      "detatch": {
+        "params": { "period": 10.0},
+        "tracks": {
+          "mod1": [
+            { "at": 0.0, "set": { "disconnect": "P1"} },
+            { "dt": "@period*0.5", "set": { "disconnect": "P3"} }
+          ]
+        }
+      }
+    }
   }
 }

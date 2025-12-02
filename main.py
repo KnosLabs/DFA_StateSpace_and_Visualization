@@ -4,32 +4,14 @@ from modelChecker import run_model_checker
 from visualizer import ModularVisualizer
 from continuousTimePlot import TimePlot
 from readSerial import SerialReader
+from fileHandler import import_transitions
 import time
 
 class DFA:
     def __init__(self, start_state = frozenset()):
         self.current_state = start_state
-        self.transitions = {}
+        self.transitions = import_transitions()
         self.occupied = {}
-
-    def import_transitions(self, filename='transitions.csv'):
-        self.transitions.clear()
-
-        with open(filename, mode='r') as file:
-            reader = csv.reader(file)
-            header = next(reader) 
-
-            for row in reader:
-                from_state_str = row[0] 
-                action = row[1]          
-                to_state_str = row[2]   
-
-                from_state = eval(from_state_str)
-                to_state = eval(to_state_str)  
-
-                self.transitions[(from_state, action)] = to_state
-
-        print(f"Transitions imported from {filename}")
 
     def perform_action(self, action):
         if self.current_state is None:
@@ -45,7 +27,7 @@ class DFA:
         else:
             print(f"No valid transition from state '{self.current_state}' on action '{action}'")
 
-    def matrix_to_state(self, matrix):
+    def matrix_to_state(self, matrix): # Converts configuration matrix to a state representation
         read_state = {}
         for module_idx, row in enumerate(matrix):
             for port_idx, val in enumerate(row):

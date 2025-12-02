@@ -11,7 +11,7 @@ class SerialReader:
         self.cols = ports   # Number of ports + bend angle
         self.ser = serial.Serial(self.port, baudrate)
 
-    def find_port(self, default_port=""):
+    def find_port(default_port=""):
         ports = serial.tools.list_ports.comports()
         for port in ports:
             if "COM" in port.description:
@@ -32,6 +32,33 @@ class SerialReader:
                     if len(config_matrix) == self.rows:
                         break
         return config_matrix
+    
+    def matrix_to_state(self, matrix): # Converts configuration matrix to a state representation
+        read_state = {}
+        for module_idx, row in enumerate(matrix):
+            for port_idx, val in enumerate(row):
+
+                # 1 indicates the presence of the control module
+                if val == 1:
+                    read_state[f'M{module_idx+1}_P{port_idx+1}'] = f'M0_P0_O1'
+
+                elif val != 0:
+                    if val < 0:     #If value is negative, switch orientation
+                        val = -val
+                        orient = 2
+                    else:
+                        orient = 1
+
+                     # Decodes actuator number and port number
+                    binary_val = format(val, '08b')
+                    port_num = int(binary_val[-3:], 2)
+                    module_num = int(binary_val[:5], 2)
+
+                    read_state[f'M{module_idx+1}_P{port_idx+1}'] = f'M{module_num}_P{port_num}_O{orient}'
+
+        return frozenset(read_state.items())
+    
+    
     
 
 if __name__ == '__main__':
