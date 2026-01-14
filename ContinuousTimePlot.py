@@ -1,3 +1,5 @@
+# Time based plotting class for visualizing module/port connections
+
 import matplotlib.pyplot as plt
 import numpy as np
 import time
@@ -37,7 +39,7 @@ class TimePlot:
         self.ax.legend(self.lines[self.portsToDisplay], self.legendTitles[self.portsToDisplay], loc="upper right")
 
         plt.draw()
-        plt.pause(0.01)  # Pause for the plot to update (adjust as needed)
+        plt.pause(0.01)  # Pause for the plot to update 
 
 
     def export_data(self, filename='outputData.csv'):

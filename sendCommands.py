@@ -4,7 +4,7 @@
 import serial
 
 class SendCommands:
-    def __init__(self, modules, serial_port='/dev/cu.usbmodem14401', baud_rate=9600):
+    def __init__(self, modules, serial_port="", baud_rate=9600):
         self.col = 4    # Number of "active" ports + bend angle (inflate command))
         self.rows = modules
         self.serial_port = serial_port
@@ -43,6 +43,6 @@ if __name__ == '__main__':
 
     actions = ["connect_M1_P1_M2_P4", "disconnect_M3_P3"]
     print(command.actions_to_matrix(actions))
-    #command.write_actions_matrix(actions)
+    command.write_actions_matrix(actions)
 
 

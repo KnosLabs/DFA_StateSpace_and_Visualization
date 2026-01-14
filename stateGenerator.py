@@ -1,6 +1,5 @@
 from visualizer import ModularVisualizer
-#from readSerial import SerialReader
-#from modelChecker import run_model_checker
+from fileHandler import export_transitions
 import time
 import csv
 
@@ -130,9 +129,11 @@ class StateGenerator:
     def generate_possible_actions(self):
         actions = []
         for i in range(self.num_modules):
-            for connections in product(self.femalePorts, self.orientations):
+            #Control module connections
+            for connections in product(self.femalePorts, self.orientations):        
                         fPort, orientation = connections
                         actions.append(f'connect_M{i+1}_{fPort}_M0_P0_{orientation}')
+            #Module to module connections
             for j in range(self.num_modules):
                 if i != j:
                     for connections in product(self.malePorts, self.femalePorts, self.orientations):
@@ -222,7 +223,7 @@ class StateGenerator:
             self.perform_action(action)
             time.sleep(.5)   
 
-    
+    # Will remove 
     def export_transitions(self, filename='transitions.csv'):
         # Prepare data 
         csv_data = []
@@ -240,9 +241,10 @@ class StateGenerator:
 
 
 if __name__ == "__main__":
-    num_modules = 3
+    num_modules = 1
     stateGen = StateGenerator(num_modules)
-    stateGen.export_transitions()
+    #stateGen.export_transitions()
+    export_transitions(stateGen.transitions)
     
     while True:
         matrix = [[20, 1, 0],
