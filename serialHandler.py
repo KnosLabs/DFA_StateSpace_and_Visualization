@@ -3,15 +3,19 @@
 import serial
 import serial.tools.list_ports
 
-class SerialReader:
+class SerialHandler:
     def __init__(self, serial_port="", baudrate=9600, modules=5, ports=4):
         self.port = self.find_port(serial_port)
         self.baudrate = baudrate
         self.rows = modules
         self.cols = ports   # Number of ports + bend angle
-        self.ser = serial.Serial(self.port, baudrate)
+        self.ser = serial.Serial(self.port, baudrate, timeout=1)
+        if self.ser.is_open:
+            print(f"Serial port {self.port} opened at {baudrate} baud.")
+        else:
+            print(f"Failed to open serial port {self.port}.")
 
-    def find_port(default_port=""):
+    def find_port(self, default_port=""):
         ports = serial.tools.list_ports.comports()
         for port in ports:
             if "COM" in port.description:
@@ -19,6 +23,13 @@ class SerialReader:
                 return port.device
         print(f"Defaulting to port: {default_port}")
         return default_port
+    
+    def send_line(self, line: str):
+        self.ser.write((line + "\n").encode("utf-8"))
+        print("Sent:", line.strip())
+
+    def close(self):
+        self.ser.close()
     
     def read_matrix(self):
         config_matrix = []
@@ -58,10 +69,13 @@ class SerialReader:
 
         return frozenset(read_state.items())
     
-    
+    def read_state(self):
+        matrix = self.read_matrix()
+        state = self.matrix_to_state(matrix)
+        return state
     
 
 if __name__ == '__main__':
-    reader = SerialReader()
+    reader = SerialHandler()
     matrix = reader.read_matrix()
     print(matrix)

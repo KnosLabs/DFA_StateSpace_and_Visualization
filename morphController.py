@@ -2,11 +2,9 @@
 # a set of commands for control. 
 
 ## Configurations to include: Crawler, Pipe Climbing Robot, Rolling Cylinder, ManusBot, TendrilBot
-
 import json
 import time
-import serial
-from readSerial import SerialReader
+from serialHandler import SerialHandler
 
 class RobotController:
     def __init__(self):
@@ -18,23 +16,42 @@ class RobotController:
         self.center_module = None
         self.current_config_name = None
         self.control_sequences = []
-
-        self.ser = serial.Serial('COM13', 9600, timeout=1)
+       
+        self.ser = SerialHandler()
 
     def parse_state(self, state):
         self.current_state = state
         self.connections = {}
 
         for key, value in state.items():
-            module_a, port_a = key[:2], key[2:]
-            module_b, port_b = value[:2], value[2:4]
-            orientation_b = value[4:] 
+            module_a, port_a = key.split("_")
 
+            parts = value.split("_")
+            module_b, port_b, orientation_b = parts[0], parts[1], parts[2]
+
+            # Ensure both modules exist in connections dict
             self.connections.setdefault(module_a, {})
             self.connections.setdefault(module_b, {})
 
-            self.connections[module_a][port_a] = (module_b, port_b)
-            self.connections[module_b][port_b] = (module_a, port_a)
+            # Store bidirectional connection
+            self.connections[module_a][port_a] = (module_b, port_b, orientation_b)
+            self.connections[module_b][port_b] = (module_a, port_a, orientation_b)
+        
+        self.connections = self._filter_connections()   # Remove M0 connections for configuration identification
+
+
+    def _filter_connections(self):
+        """Return a copy of connections with M0 removed as key or value. Not used to determine configuration."""
+        filtered = {}
+        for mod, ports in self.connections.items():
+            if mod == "M0":   # skip M0 as a key
+                continue
+            for port, (other_mod, other_port, orientation) in ports.items():
+                if other_mod == "M0":   # skip M0 as a value
+                    continue
+                filtered.setdefault(mod, {})[port] = (other_mod, other_port, orientation)
+        return filtered
+
 
     def score_template_at_center(self, center_mod: str, template: dict):
         """
@@ -49,7 +66,9 @@ class RobotController:
 
         # Direct center-port requirements (e.g., "P1", "P3")
         direct_reqs = [s for s in specs if not self._is_path(s)]
-        has_all_direct = all(s in self.connections.get(center_mod, {}) for s in direct_reqs)
+        has_all_direct = all(s in self.connections.get(center_mod, {}) 
+                             and self.connections[center_mod][s][0] != "M0"
+                             for s in direct_reqs)
 
         resolved = 0
         for spec in specs:
@@ -111,7 +130,7 @@ class RobotController:
         for port in path_ports:
             if port not in self.connections[current_mod]:
                 return (None, None, False)
-            neighbor_mod, neighbor_port = self.connections[current_mod][port]
+            neighbor_mod, neighbor_port, orientation = self.connections[current_mod][port]
             # Step to neighbor
             last_port = neighbor_port
             current_mod = neighbor_mod
@@ -158,7 +177,7 @@ class RobotController:
             else:
                 # Direct neighbor: spec is a port on center
                 if spec in center_ports:
-                    neighbor_mod, _ = center_ports[spec]
+                    neighbor_mod, _, _ = center_ports[spec]
                     if role in reverse_role_map and reverse_role_map[role] != neighbor_mod:
                         raise ValueError(
                             f"Conflict: Role {role} maps to multiple modules: "
@@ -173,7 +192,7 @@ class RobotController:
         return role_map  # module_id -> role
     
     @staticmethod
-    def resolve_expression(expr, params):
+    def _resolve_expression(expr, params):
         if isinstance(expr, (int, float)):
             return expr
         if isinstance(expr, str) and expr.startswith("@"):
@@ -194,10 +213,10 @@ class RobotController:
                 current_time = 0.0
                 for step in steps:
                     if "at" in step:
-                        time = self.resolve_expression(step["at"], params)
+                        time = self._resolve_expression(step["at"], params)
                         current_time = time
                     elif "dt" in step:
-                        time = current_time + self.resolve_expression(step["dt"], params)
+                        time = current_time + self._resolve_expression(step["dt"], params)
                         current_time = time
                     else:
                         print("Error: No time specified in step.")
@@ -223,39 +242,30 @@ class RobotController:
         self.control_sequences.sort(key=lambda x: (x["command"], x["time"]))            
         return self.control_sequences
     
-    def update_configuration(self, matrix):
+    def update(self, matrix):
         self.parse_state(matrix)
         self.identify_configuration()
         self.generate_timed_sequence()
     
     def get_command_sequence(self, command_name):
         all_sequences = self.control_sequences
-        return [s for s in all_sequences if s["command"] == command_name]
+        return [s for s in all_sequences if s["command"] == command_name] #Returns all steps for the specified command
 
-    
     def send_command(self, sequence):
-        if not self.ser or not self.ser.is_open:
-            print("Error: Serial connection not open.")
-            return
-
         for step in sequence:
-            line = f"{step['command']},{step['time']},{step['module']},{step['action']},{step['value']}\n"
-            self.ser.write(line.encode("utf-8"))
-            print("Sent:", line.strip())
+            line = f"{step['time']},{step['module']},{step['action']},{step['value']}\n"
+            self.ser.send_line(line)
             time.sleep(0.05)
-
-        
 
 
 if __name__ == "__main__":
     state = {
-        "M1P4": "M6P3O1",  
-        "M1P1": "M3P6O2",  
-        "M6P4": "M4P1O1",
-        "M3P1": "M5P4O1",    
+        "M1_P1": "M2_P6_O1",  
+        "M1_P2": "M0_P0_O1"
     }
-
+    
     robot = RobotController()
+    #state = robot.ser.read_state() 
     robot.parse_state(state)
 
     config_name = robot.identify_configuration()
@@ -264,9 +274,8 @@ if __name__ == "__main__":
     role_map = robot.assign_roles()
     print("Role mapping:", role_map)
 
-
     while True:
-        robot.update_configuration(state)
+        robot.update(state)
         print("Available commands:", list(robot.CONFIG_TEMPLATES[config_name]["control"].keys()))
 
         cmd = input("Enter command (or 'q'): ").strip().lower()

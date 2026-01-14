@@ -144,6 +144,7 @@
       }
     }
   },
+
   "sinusoidal_4": {
     "structure": {
       "meta": { "connections": 2 },
@@ -153,28 +154,28 @@
       "P4>P1": "body4"
     },
     "control": {
-      "sidwind": []
+      "sidwind": {
+      }
     }
   },
-  "test_3": {
+
+  "test_2": {
     "structure": {
-      "meta": { "connections": 2 },
+      "meta": { "connections": 1 },
       "center": "mod1",
-      "P1": "mod2",
-      "P3": "mod3"
+      "P1": "mod2"
     },
     "control": {
-      "move": {
-        "params": { "period": 6.0},
+      "wiggle": {
+        "params": { "period": 10.0},
         "tracks": {
           "mod1": [
-            { "at": 0.0, "set": { "inflate": 1 } }
+            { "at": 0.0, "set": { "inflate": 1 } },
+            { "dt": "@0.5*period", "set": { "inflate": 0 } }
           ],
           "mod2": [
-            { "at": 0.0, "set": { "inflate": 1 } }
-          ],
-          "mod3": [
-            { "at": "@0.5*period", "set": { "inflate": 1 } }
+            { "at": 3.0, "set": { "inflate": 1 } },
+            { "dt": "@0.5*period", "set": { "inflate": 0 } }
           ]
         }
       },

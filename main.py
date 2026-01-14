@@ -3,7 +3,7 @@ from sendCommands import SendCommands
 from modelChecker import run_model_checker
 from visualizer import ModularVisualizer
 from continuousTimePlot import TimePlot
-from readSerial import SerialReader
+from serialHandler import SerialHandler
 from fileHandler import import_transitions
 import time
 
