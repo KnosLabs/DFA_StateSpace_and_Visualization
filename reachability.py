@@ -4,23 +4,23 @@ import itertools
 
 
 BEND_STATES = ["B0", "B90", "B180"]
-ORIENTATIONS = ["O0", "O1"]
+ORIENTATIONS = ["O1", "O2"]
 
-MALE_PORTS = {"P0", "P1", "P2"}
-FEMALE_PORTS = {"P3", "P4", "P5"}
+FEMALE_PORTS = {"P1", "P2", "P3"}
+MALE_PORTS = {"P4", "P5", "P6"}
 
 LOCAL_PORTS = {
-    "P0": ((0,0), (-1,0)),
-    "P1": ((1,0), (1,0)),
-    "P2": ((0,0), (0,1)),
-    "P3": ((0,0), (0,-1)),
-    "P4": ((1,0), (0,1)),
-    "P5": ((1,0), (0,-1)),
+    "P1": ((0,0), (-1,0)),
+    "P2": ((1,0), (1,0)),
+    "P3": ((0,0), (0,1)),
+    "P4": ((0,0), (0,-1)),
+    "P5": ((1,0), (0,1)),
+    "P6": ((1,0), (0,-1)),
 }
 
 def rotate(cell, orientation):
     x, y = cell
-    return (x, y) if orientation == "O0" else (x, -y)
+    return (x, y) if orientation == "O1" else (x, -y)
 
 
 class ActuatorGeom:
@@ -216,13 +216,13 @@ if 1:
 
     S0 = State(
         actuators=[
-            ActuatorState(0, "O0", "B0", {"P3"}),          # right end free
-            ActuatorState(1, "O0", "B0", {"P0", "P3"}),    # middle
-            ActuatorState(2, "O0", "B0", {"P0"}),          # left end free
+            ActuatorState(0, "O1", "B0", {"P4"}),          # right end free
+            ActuatorState(1, "O1", "B0", {"P1", "P4"}),    # middle
+            ActuatorState(2, "O1", "B0", {"P1"}),          # left end free
         ],
         connections={
-            ((0, "P3"), (1, "P0")),
-            ((1, "P3"), (2, "P0")),
+            ((0, "P4"), (1, "P1")),
+            ((1, "P4"), (2, "P1")),
         }
     )
 
@@ -243,13 +243,13 @@ if 0:
 
     S0 = State(
         actuators=[
-            ActuatorState(0, "O0", "B0", {"P1"}),
-            ActuatorState(1, "O0", "B0", {"P1", "P3"}),
-            ActuatorState(2, "O0", "B0", {"P3"}),
+            ActuatorState(0, "O1", "B0", {"P2"}),
+            ActuatorState(1, "O1", "B0", {"P2", "P4"}),
+            ActuatorState(2, "O1", "B0", {"P4"}),
         ],
         connections={
-            ((0, "P1"), (1, "P3")),
-            ((1, "P1"), (2, "P3")),
+            ((0, "P2"), (1, "P4")),
+            ((1, "P2"), (2, "P4")),
         }
     )
 

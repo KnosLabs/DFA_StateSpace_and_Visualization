@@ -1,7 +1,6 @@
 import json
 import csv
 
-@staticmethod
 def import_transitions(filename='transitions.csv'):
     transitions = {}
 
@@ -23,7 +22,6 @@ def import_transitions(filename='transitions.csv'):
     return transitions   
     
 
-@staticmethod
 def export_transitions(transitions, filename='transitions.csv'):
     # Prepare data 
     csv_data = []
@@ -40,7 +38,6 @@ def export_transitions(transitions, filename='transitions.csv'):
     print(f"Transitions exported to {filename}")
     
 
-@staticmethod
 def export_control_sequence(sequence, filepath="control_sequence.json"):
     command_list = []
 
