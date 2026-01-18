@@ -1,138 +1,37 @@
-import csv
-from sendCommands import SendCommands
-from modelChecker import run_model_checker
-from visualizer import ModularVisualizer
-from continuousTimePlot import TimePlot
-from serialHandler import SerialHandler
-from fileHandler import import_transitions
-import time
+#from serialHandler import SerialHandler
+from stateInterpreter import MatrixStateParser
+from reachableEndStates import get_reachable_end_states, actions_to_reach
+from canonicalKeyGen import canonical_key, key_to_dict
 
-class DFA:
-    def __init__(self, start_state = frozenset()):
-        self.current_state = start_state
-        self.transitions = import_transitions()
-        self.occupied = {}
-
-    def perform_action(self, action):
-        if self.current_state is None:
-            raise ValueError("Start state is not set.")
-        
-        if (self.current_state, action) in self.transitions:
-            new_state = self.transitions[(self.current_state, action)]
-            print(f"Transitioning from {self.current_state} to {new_state} on action '{action}'")
-            self.current_state = new_state
-        
-            #visualizer = ModularVisualizer()
-            #visualizer.visualize_configuration(self.current_state)
-        else:
-            print(f"No valid transition from state '{self.current_state}' on action '{action}'")
-
-    def matrix_to_state(self, matrix): # Converts configuration matrix to a state representation
-        read_state = {}
-        for module_idx, row in enumerate(matrix):
-            for port_idx, val in enumerate(row):
-
-                # 1 indicates the presence of the control module
-                if val == 1:
-                    read_state[f'M{module_idx+1}_P{port_idx+1}'] = f'M0_P0_O1'
-
-                elif val != 0:
-                    if val < 0:     #If value is negative, switch orientation
-                        val = -val
-                        orient = 2
-                    else:
-                        orient = 1
-
-                     # Decodes actuator number and port number
-                    binary_val = format(val, '08b')
-                    port_num = int(binary_val[-3:], 2)
-                    module_num = int(binary_val[:5], 2)
-
-                    read_state[f'M{module_idx+1}_P{port_idx+1}'] = f'M{module_num}_P{port_num}_O{orient}'
-
-        return frozenset(read_state.items())
-
-    def action_config_matrix(self, matrix):
-        actions = []
-        for module_idx, row in enumerate(matrix):
-            for port_idx, val in enumerate(row):
-                occupied_key = (module_idx, port_idx)
-
-                # 1 indicates the presence of the control module
-                if val == 1:
-                    if occupied_key not in self.occupied:
-                        self.occupied[occupied_key] = True
-                        actions.append(f'connect_M{module_idx+1}_P{port_idx+1}_M0_P0_O1')
-
-                # Non-zero indicates an actuator is connected on that port
-                elif val != 0:
-                    if occupied_key not in self.occupied:
-                        self.occupied[occupied_key] = True
-
-                        # Decodes actuator number and port number
-                        binary_val = format(val, '08b')
-                        port_num = int(binary_val[-3:], 2)
-                        module_num = int(binary_val[:5], 2)
-
-                        actions.append(f'connect_M{module_idx+1}_P{port_idx+1}_M{module_num}_P{port_num}_O1')
-                        print(f'M{module_idx+1}_P{port_idx+1}_M{module_num}_P{port_num}')
-                else: 
-                    # If status of port changes (from a value to zero), disconnect actuator 
-                    if occupied_key in self.occupied:
-                        actions.append(f'disconnect_M{module_idx+1}_P{port_idx+1}')
-                        self.occupied.pop(occupied_key)
-
-        print(actions)
-        for action in actions:
-            self.perform_action(action)
-            time.sleep(.5)
+# Read current state from serial port (In dict from)
+# Input data from dict form to reacahability module
+# Dict to canonical key
+# Load reachabili.ndjson
+# Compare current state to reachable state S0
+# Return list of reachable end states S1 keys
+# Key to dict of desired end state. 
+# Return list of actions to reach each S1 from S0
 
 if __name__ == "__main__":
-    dfa = DFA()
-    dfa.import_transitions()
+    #serial_handler = SerialHandler(baudrate=9600)
 
-    plot = TimePlot()
-    read = SerialReader(modules=5)
+    # Example current state read from serial port
+    #current_state = serial_handler.read_state()
+    current_state_matrix = [[28, 0, 0, 0],
+                            [0, 12, 0, 90],
+                            [0, 0, 0, 90],
+    ]
 
-    serial_port = read.find_port()
-    command = SendCommands(modules=4, port=serial_port)
+    stateParser = MatrixStateParser()
+    current_state = stateParser.matrix_to_state(current_state_matrix)
+    print("Current State:", current_state)
 
-    #Self Reconfiguration Code
-    initial_matrix = [[0, 1, 0],        # Could be read from control module
-                    [0,  0, 0],  
-                    [12,  0, 0]    
-        ]
-    
-    desired_matrix = [[20, 1, 0],
-                    [0,  0, 0],  
-                    [0,  0, 0]    
-        ]
-
-    desired_state = dfa.matrix_to_state(desired_matrix)
-    initial_state = dfa.matrix_to_state(initial_matrix)
-
-    verified, states, actions = run_model_checker(dfa.transitions, initial_state, desired_state)
+    reachable_states = get_reachable_end_states(current_state)
+    print("Reachable End States:", reachable_states)
 
 
-    for idx, action in enumerate(actions):      # Iterates over all actions defined by model checker
-        commandSent = False
-
-        while True:     # Waits for action to be completed
-            matrix = read.read_matrix()  ## Reads current Matrix
-            current_state = dfa.matrix_to_state(matrix)    #Converts matrix to a state
-
-            if commandSent == False:    # Only send command to control module once
-                time.sleep(.5)
-                command.write_actions_matrix(action)    # Sends "command matrix"
-                commandSent = True
-               
-            plot.plotData(matrix)      ## Plots data read on ports from matrix over time
-            time.sleep(1)
-
-            if current_state == states[idx]:   # Continue to next action once state has been reached
-                break
-            
-    plot.export_data()         ## Once complete, export the readData vs time csv
-
-        
-       
+    # For each reachable state, get actions to reach it
+    for target_key in reachable_states:
+        target_state = key_to_dict(target_key)
+        actions = actions_to_reach(current_state, target_state)
+        print(f"Actions to reach {target_key}:", actions)

@@ -1,41 +1,8 @@
 import json
 import csv
-
-def import_transitions(filename='transitions.csv'):
-    transitions = {}
-
-    with open(filename, mode='r') as file:
-        reader = csv.reader(file)
-        header = next(reader) 
-
-        for row in reader:
-            from_state_str = row[0] 
-            action = row[1]          
-            to_state_str = row[2]   
-
-            from_state = eval(from_state_str)
-            to_state = eval(to_state_str)  
-
-            transitions[(from_state, action)] = to_state
-
-    print(f"Transitions imported from {filename}") 
-    return transitions   
-    
-
-def export_transitions(transitions, filename='transitions.csv'):
-    # Prepare data 
-    csv_data = []
-    for (from_state, action), to_state in transitions.items():
-        from_state_str = str(from_state)  # Convert frozenset to string
-        to_state_str = str(to_state) 
-        csv_data.append([from_state_str, action, to_state_str]) 
-
-    with open(filename, mode='w', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerow(['From State', 'Action', 'To State'])  # header
-        writer.writerows(csv_data) 
-
-    print(f"Transitions exported to {filename}")
+import os
+from collections import defaultdict
+from canonicalKeyGen import canonical_key, key_to_json, state_to_dict
     
 
 def export_control_sequence(sequence, filepath="control_sequence.json"):
@@ -64,3 +31,53 @@ def export_control_sequence(sequence, filepath="control_sequence.json"):
         json.dump(command_list, f, indent=2)
     print(f"Exported control sequence to {filepath}")
 
+
+def freeze(obj):
+    """
+    Recursively convert lists to tuples so the structure becomes hashable.
+    """
+    if isinstance(obj, list):
+        return tuple(freeze(x) for x in obj)
+    elif isinstance(obj, dict):
+        return tuple(sorted((k, freeze(v)) for k, v in obj.items()))
+    else:
+        return obj
+    
+
+def load_reachability(filename):
+    cache = {}
+
+    if not os.path.exists(filename):
+        return cache
+
+    with open(filename, "r") as f:
+        for line in f:
+            record = json.loads(line)
+
+            s0_key = freeze(record["s0"])
+            s1_keys = [freeze(s1) for s1 in record["s1"]]
+
+            cache[s0_key] = s1_keys
+
+    return cache
+
+
+def save_reachability_keys(transitions, filename):
+    
+    transition_map = defaultdict(set)
+
+    # Group S1s by S0
+    for s0, s1 in transitions:
+        k0 = canonical_key(state_to_dict(s0))
+        k1 = canonical_key(state_to_dict(s1))
+        transition_map[k0].add(k1)
+
+    with open(filename, "w") as f:
+        for k0, s1_keys in transition_map.items():
+            record = {
+                "s0": key_to_json(k0),
+                "s1": [key_to_json(k1) for k1 in s1_keys]
+            }
+            f.write(json.dumps(record) + "\n")
+
+    print(f"Saved {len(transition_map)} grouped S0 states to {filename}")

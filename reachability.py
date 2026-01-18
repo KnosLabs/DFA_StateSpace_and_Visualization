@@ -1,10 +1,11 @@
 import csv
+from fileHandler import save_reachability_keys
 from collections import deque
 import itertools
 
 
 BEND_STATES = ["B0", "B90", "B180"]
-ORIENTATIONS = ["O1", "O2"]
+ORIENTATIONS = ["O0", "O1"]
 
 FEMALE_PORTS = {"P1", "P2", "P3"}
 MALE_PORTS = {"P4", "P5", "P6"}
@@ -20,7 +21,7 @@ LOCAL_PORTS = {
 
 def rotate(cell, orientation):
     x, y = cell
-    return (x, y) if orientation == "O1" else (x, -y)
+    return (x, y) if orientation == "O0" else (x, -y)
 
 
 class ActuatorGeom:
@@ -141,7 +142,6 @@ def expand_state(state, geoms):
     return next_states
 
 
-
 def enumerate_reachable(initial, geoms, max_states=1000): # Reachability
     Q = deque([initial])
     visited = set()
@@ -170,91 +170,30 @@ def enumerate_reachable(initial, geoms, max_states=1000): # Reachability
 
     return transitions
 
-
-
-
-def format_state_connections(state):  # For csv export
-    acts = state.actuators
-    conns = state.connections
-    act_map = {a.mid: [] for a in acts}
-
-    for (m1, p1), (m2, p2) in conns:
-        a1 = next(a for a in acts if a.mid == m1)
-        a2 = next(a for a in acts if a.mid == m2)
-        act_map[m1].append(
-            f"M{m1}_{p1}_{a1.orientation}_{a1.bend},"
-            f"M{m2}_{p2}_{a2.orientation}_{a2.bend}"
-        )
-        act_map[m2].append(
-            f"M{m2}_{p2}_{a2.orientation}_{a2.bend},"
-            f"M{m1}_{p1}_{a1.orientation}_{a1.bend}"
-        )
-
-    return tuple(
-        tuple(act_map[a.mid]) if act_map[a.mid]
-        else (f"M{a.mid}_None_{a.orientation}_{a.bend}",)
-        for a in acts
-    )
-
-
-def export_csv(transitions, filename):
-    with open(filename, "w", newline="") as f:
-        w = csv.writer(f)
-        w.writerow(["Transition"])
-        for s0, s1 in transitions:
-            w.writerow([f"{format_state_connections(s0)} :: {format_state_connections(s1)}"])
-
-
-
 # Test and debug
 if 1:
     geoms = {
-        0: ActuatorGeom(0, 0, 0),
-        1: ActuatorGeom(1, 1, 0),
-        2: ActuatorGeom(2, 2, 0),
+        1: ActuatorGeom(1, 0, 0),
+        2: ActuatorGeom(2, 1, 0),
+        3: ActuatorGeom(3, 2, 0),
     }
 
     S0 = State(
         actuators=[
-            ActuatorState(0, "O1", "B0", {"P4"}),          # right end free
-            ActuatorState(1, "O1", "B0", {"P1", "P4"}),    # middle
-            ActuatorState(2, "O1", "B0", {"P1"}),          # left end free
+            ActuatorState(1, "O0", "B0", {"P1, P4"}),          # right end free
+            ActuatorState(2, "O0", "B90", {"P2"}),    # middle
+            ActuatorState(3, "O0", "B0", {"P4"}),          # left end free
         ],
         connections={
-            ((0, "P4"), (1, "P1")),
-            ((1, "P4"), (2, "P1")),
+            (("M1", "P1"), ("M2", "P5")),
+            (("M2", "P1"), ("M3", "P5")),
         }
     )
 
     transitions = enumerate_reachable(S0, geoms)
     print("Transitions:", len(transitions))
-    export_csv(transitions, "reachable.csv")
+    save_reachability_keys(transitions, "reachable.ndjson")
+    #export_csv(transitions, "reachable.csv")
     print("CSV written to reachable.csv")
 
-
-
-
-if 0:
-    geoms = {
-        0: ActuatorGeom(0, 0, 0),
-        1: ActuatorGeom(1, 1, 0),
-        2: ActuatorGeom(2, 2, 0),
-    }
-
-    S0 = State(
-        actuators=[
-            ActuatorState(0, "O1", "B0", {"P2"}),
-            ActuatorState(1, "O1", "B0", {"P2", "P4"}),
-            ActuatorState(2, "O1", "B0", {"P4"}),
-        ],
-        connections={
-            ((0, "P2"), (1, "P4")),
-            ((1, "P2"), (2, "P4")),
-        }
-    )
-
-    transitions = enumerate_reachable(S0, geoms)
-    print("Transitions:", len(transitions))
-    export_csv(transitions, "reachable.csv")
-    print("CSV written to reachable.csv")
 

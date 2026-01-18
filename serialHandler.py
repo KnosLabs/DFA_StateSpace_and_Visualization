@@ -2,6 +2,7 @@
 
 import serial
 import serial.tools.list_ports
+from stateInterpreter import MatrixStateParser
 
 class SerialHandler:
     def __init__(self, serial_port="", baudrate=9600, modules=5, ports=4):
@@ -43,37 +44,12 @@ class SerialHandler:
                     if len(config_matrix) == self.rows:
                         break
         return config_matrix
-    
-    def matrix_to_state(self, matrix): # Converts configuration matrix to a state representation
-        read_state = {}
-        for module_idx, row in enumerate(matrix):
-            for port_idx, val in enumerate(row):
 
-                # 1 indicates the presence of the control module
-                if val == 1:
-                    read_state[f'M{module_idx+1}_P{port_idx+1}'] = f'M0_P0_O1'
-
-                elif val != 0:
-                    if val < 0:     #If value is negative, switch orientation
-                        val = -val
-                        orient = 2
-                    else:
-                        orient = 1
-
-                     # Decodes actuator number and port number
-                    binary_val = format(val, '08b')
-                    port_num = int(binary_val[-3:], 2)
-                    module_num = int(binary_val[:5], 2)
-
-                    read_state[f'M{module_idx+1}_P{port_idx+1}'] = f'M{module_num}_P{port_num}_O{orient}'
-
-        return frozenset(read_state.items())
-    
     def read_state(self):
         matrix = self.read_matrix()
-        state = self.matrix_to_state(matrix)
+        parser = MatrixStateParser()
+        state = parser.matrix_to_state(matrix)
         return state
-    
 
 if __name__ == '__main__':
     reader = SerialHandler()
